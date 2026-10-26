@@ -2,6 +2,8 @@ name: Build APK
 on:
   push:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,7 +17,14 @@ jobs:
         with:
           gradle-version: '8.9'
       - run: gradle assembleDebug
+      - run: cp app/build/outputs/apk/debug/app-debug.apk HotspotKeeper.apk
       - uses: actions/upload-artifact@v4
         with:
           name: HotspotKeeper-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: HotspotKeeper.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Hotspot Keeper build ${{ github.run_number }}
+          files: HotspotKeeper.apk
+          make_latest: true
