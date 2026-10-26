@@ -1,0 +1,21 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.mchale.hotspotkeeper'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.mchale.hotspotkeeper'
+        minSdk 21
+        // Deliberately 28: apps targeting Android 9 or lower are still allowed to
+        // turn Wi-Fi on and switch networks themselves on newer Android versions.
+        targetSdk 28
+        versionCode 1
+        versionName '1.0'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint { abortOnError false; checkReleaseBuilds false }
+}
