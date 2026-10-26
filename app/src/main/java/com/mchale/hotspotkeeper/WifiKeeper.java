@@ -35,6 +35,16 @@ public final class WifiKeeper {
         return (WifiManager) c.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
     }
 
+    /** Compare names loosely: iPhones often use a curly apostrophe (Ryan’s iPhone). */
+    static boolean same(String a, String b) {
+        if (a == null || b == null) return false;
+        return norm(a).equals(norm(b));
+    }
+
+    private static String norm(String s) {
+        return strip(s).replace('\u2019', '\'').replace('\u2018', '\'').trim();
+    }
+
     static String strip(String s) {
         if (s == null) return null;
         if (s.length() >= 2 && s.startsWith("\"") && s.endsWith("\"")) return s.substring(1, s.length() - 1);
@@ -55,7 +65,7 @@ public final class WifiKeeper {
             List<WifiConfiguration> list = wm.getConfiguredNetworks();
             if (list != null) {
                 for (WifiConfiguration cfg : list) {
-                    if (ssid.equals(strip(cfg.SSID))) return cfg.networkId;
+                    if (same(ssid, cfg.SSID)) return cfg.networkId;
                 }
             }
         } catch (SecurityException ignored) { }
@@ -82,7 +92,7 @@ public final class WifiKeeper {
             List<ScanResult> results = wm.getScanResults();
             if (results == null || results.isEmpty()) return null;
             for (ScanResult r : results) {
-                if (ssid.equals(r.SSID)) return Boolean.TRUE;
+                if (same(ssid, r.SSID)) return Boolean.TRUE;
             }
             return Boolean.FALSE;
         } catch (SecurityException e) {
@@ -101,7 +111,7 @@ public final class WifiKeeper {
             return "Wi-Fi was off. Turning it on…";
         }
 
-        if (ssid.equals(currentSsid(c))) return "Connected to " + ssid;
+        if (same(ssid, currentSsid(c))) return "Connected to " + ssid;
 
         int id = findSavedNetwork(wm, ssid);
         if (id == -1) id = addNetwork(wm, ssid, password(c));
@@ -109,18 +119,18 @@ public final class WifiKeeper {
             return "\"" + ssid + "\" isn't saved on this box. Join it once in Wi-Fi settings, or enter its password in the app.";
         }
 
+        // Don't trust the scan list: Android throttles background scans, so it's often stale.
+        // Always ask Android to connect; it does its own fresh search when it does.
         Boolean visible = hotspotVisible(wm, ssid);
         try { wm.startScan(); } catch (Exception ignored) { }
-        if (Boolean.FALSE.equals(visible)) {
-            return "Waiting for \"" + ssid + "\". Open Personal Hotspot on the phone.";
-        }
+        String seen = Boolean.FALSE.equals(visible) ? " (not seen yet)" : "";
 
         long now = System.currentTimeMillis();
-        if (now - lastAttemptMs < 25000) return "Connecting to " + ssid + "…";
+        if (now - lastAttemptMs < 20000) return "Connecting to " + ssid + "…" + seen;
         lastAttemptMs = now;
 
         wm.enableNetwork(id, true);
         wm.reconnect();
-        return "Connecting to " + ssid + "…";
+        return "Connecting to " + ssid + "…" + seen;
     }
 }
